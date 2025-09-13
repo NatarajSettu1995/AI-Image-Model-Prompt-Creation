@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PromptCraft — Image Prompt Helper</title>
+<style>
+:root {
+  --bg1: #042f2f;
+  --bg2: #021616;
+  --accent: #06b6d4;
+  --accent-dark: #0891b2;
+  --accent-light: #22d3ee;
+  --glass: rgba(255,255,255,0.04);
+  --glass-light: rgba(255,255,255,0.08);
+  --card-border: rgba(255,255,255,0.06);
+  --card-border-light: rgba(255,255,255,0.1);
+  --radius: 18px;
+  --radius-sm: 10px;
+  --text-primary: #e7fbfb;
+  --text-secondary: #cfecec;
+  --text-tertiary: #bfeeee;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body {
+  background: radial-gradient(900px 500px at 10% 10%, rgba(6,182,212,0.08), transparent),
+              linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 60%);
+  color: var(--text-primary);
+  padding: 30px;
+  display: flex;
+  align-items: start;
+  justify-content: center;
+  line-height: 1.5;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 26px;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--glass-light), var(--glass));
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 10px 40px rgba(2,6,23,0.55);
+  padding: 24px;
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+h1, h2 {
+  margin: 0;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 24px;
+  background: linear-gradient(90deg, var(--accent-light), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.lead {
+  margin: 0 0 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-light);
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+input[type="text"], 
+textarea, 
+select {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus, 
+textarea:focus, 
+select:focus {
+  border-color: rgba(6,182,212,0.4);
+  box-shadow: 0 0 0 2px rgba(6,182,212,0.1);
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.col {
+  flex: 1;
+}
+
+.imageBox {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(255,255,255,0.08);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.imageBox.drag-over {
+  border-color: var(--accent);
+  background-color: rgba(6,182,212,0.05);
+}
+
+.imagePreviewContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.imagePreview {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.imagePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.removeImage {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.removeImage:hover {
+  background: rgba(0,0,0,0.8);
+  transform: scale(1.1);
+}
+
+.placeholderContent {
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.placeholderContent i {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.placeholderContent p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  border: none;
+  color: #012224;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(6,182,212,0.2);
+}
+
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 11px 15px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.ghost:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.chip.active {
+  background: rgba(6,182,212,0.1);
+  border-color: rgba(6,182,212,0.4);
+  color: var(--accent-light);
+  box-shadow: 0 8px 22px rgba(6,182,212,0.12);
+  transform: translateY(-2px);
+}
+
+.tag {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.checkbox-item label {
+  margin: 0;
+  font-weight: normal;
+  color: var(--text-secondary);
+}
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 30px;
+  align-self: start;
+  max-height: calc(100vh - 60px);
+}
+
+.output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.word-count {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.03);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  min-height: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+pre:empty::before {
+  content: "Your generated prompt will appear here...";
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 26px;
+  background: rgba(2,6,23,0.92);
+  color: #aef2f2;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: none;
+  z-index: 1000;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  animation: toastFadeIn 0.3s ease;
+}
+
+@keyframes toastFadeIn {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Analysis overlay */
+.analysis-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(2,22,22,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.analysis-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.analysis-progress {
+  width: 80%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 15px 0;
+}
+
+.analysis-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.analysis-status {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin-top: 10px;
+}
+
+.analysis-details {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  max-width: 80%;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Auto-generation indicator */
+.auto-generate-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(2,22,22,0.9);
+  color: var(--accent-light);
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (max-width: 980px) {
+  .wrap {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  body {
+    padding: 16px;
+  }
+  
+  .card {
+    padding: 20px;
+  }
+  
+  .right {
+    position: static;
+    max-height: none;
+  }
+  
+  .row {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn, .ghost {
+    justify-content: center;
+  }
+  
+  .chips {
+    gap: 6px;
+  }
+  
+  .chip {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Loading animation */
+.loading {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  animation: spin 0.8s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Custom scrollbar */
+pre::-webkit-scrollbar {
+  width: 6px;
+}
+
+pre::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.02);
+  border-radius: 3px;
+}
+
+pre::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* Translation button for textures */
+.translate-textures-btn {
+  margin-top: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.translate-textures-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="card left">
+<header>
+<h1>PromptCraft — Image Prompt Helper</h1>
+<p class="lead">Load images (or use the sample). Pick options and generate a professional AI prompt.</p>
+</header>
+
+<!-- Image Upload / Preview -->
+<label>Reference Images</label>
+<div class="imageBox" id="imageBox">
+<div class="analysis-overlay" id="analysisOverlay">
+  <div class="loading" style="width: 30px; height: 30px;"></div>
+  <div class="analysis-progress">
+    <div class="analysis-progress-bar" id="analysisProgressBar"></div>
+  </div>
+  <div class="analysis-status" id="analysisStatus">Analyzing image content...</div>
+  <div class="analysis-details" id="analysisDetails">Detecting subjects, colors, and composition</div>
+</div>
+<div class="placeholderContent" id="placeholderText">
+  <i>📁</i>
+  <p>Drag & drop images here</p>
+  <p class="hint">or use the buttons below</p>
+</div>
+<div class="imagePreviewContainer" id="imagePreviews"></div>
+</div>
+<div class="controls">
+<input id="fileInput" type="file" accept="image/*" multiple style="display:none" />
+<button class="btn" id="loadSample"><i>🖼️</i> Load Example</button>
+<button class="ghost" id="uploadBtn"><i>📂</i> Upload Images</button>
+<button class="ghost" id="clearImage"><i>🗑️</i> Clear All</button>
+<button class="btn" id="analyzeBtn" disabled><i>🔍</i> Analyze Image</button>
+</div>
+
+<!-- Subject -->
+<div>
+<label>Subject</label>
+<input id="subject" type="text" placeholder="e.g. character, sculpture, landscape" />
+<div id="suggestionBox" class="hint"></div>
+</div>
+
+<!-- Format & Scale -->
+<div class="row">
+<div class="col">
+<label>Format</label>
+<select id="format">
+  <option>Square</option>
+  <option>Portrait</option>
+  <option>Landscape</option>
+  <option>Panoramic</option>
+  <option>4:5</option>
+  <option>16:9</option>
+</select>
+</div>
+<div class="col">
+<label>Scale / Size</label>
+<select id="scale">
+  <option>Life-like</option>
+  <option selected>Miniature / 1:7 scale</option>
+  <option>Portrait-size</option>
+  <option>Monumental</option>
+  <option>Microscopic</option>
+</select>
+</div>
+</div>
+
+<!-- Chips Sections -->
+<div>
+<label>Style / Visual</label>
+<div class="chips" id="styleChips">
+<button class="chip active" data-val="Hyper-realistic">Hyper-realistic</button>
+<button class="chip" data-val="Photorealistic">Photorealistic</button>
+<button class="chip" data-val="Stylized">Stylized</button>
+<button class="chip" data-val="Cinematic">Cinematic</button>
+<button class="chip" data-val="Illustration">Illustration</button>
+<button class="chip" data-val="Concept art">Concept art</button>
+<button class="chip" data-val="Digital painting">Digital painting</button>
+<button class="chip" data-val="Anime">Anime</button>
+<button class="chip" data-val="Watercolor">Watercolor</button>
+</div>
+</div>
+
+<div>
+<label>Lighting / Mood</label>
+<div class="chips" id="lightChips">
+<button class="chip" data-val="soft teal and white lighting">Teal & white soft</button>
+<button class="chip active" data-val="warm studio lighting">Warm studio</button>
+<button class="chip" data-val="dramatic rim lighting">Dramatic rim</button>
+<button class="chip" data-val="natural handheld lighting">Handheld natural</button>
+<button class="chip" data-val="golden hour lighting">Golden hour</button>
+<button class="chip" data-val="moonlit scene">Moonlit scene</button>
+<button class="chip" data-val="foggy / misty lighting">Foggy / Misty</button>
+<button class="chip" data-val="high contrast shadow">High contrast shadow</button>
+<button class="chip" data-val="soft diffused lighting">Soft diffused</button>
+<button class="chip" data-val="colorful neon lighting">Colorful neon</button>
+</div>
+</div>
+
+<div>
+<label>Props / Scene elements</label>
+<div class="chips" id="propChips">
+<button class="chip" data-val="computer monitor showing sculpting process">Monitor w/ sculpting</button>
+<button class="chip" data-val="visible wireframes and brush marks">Wireframes & brush</button>
+<button class="chip" data-val="tools, sketches, reference books">Tools & sketches</button>
+<button class="chip" data-val="clear round acrylic base">Clear acrylic base</button>
+<button class="chip" data-val="Other" id="otherPropBtn">Other</button>
+</div>
+<input id="otherPropInput" type="text" placeholder="Custom prop/scene element" style="display:none;margin-top:6px;" />
+</div>
+
+<!-- Textures / Details -->
+<div>
+<label>Textures / Details</label>
+<div class="chips" id="detailChips">
+<button class="chip" data-val="sharply defined sweat and fabric textures">Sweat & fabric</button>
+<button class="chip" data-val="subtle reflections and highlights">Reflections & highlights</button>
+<button class="chip" data-val="natural lens distortion">Lens distortion</button>
+<button class="chip" data-val="skin pores and fine wrinkles">Skin pores & wrinkles</button>
+<button class="chip" data-val="realistic hair strands and flow">Hair strands & flow</button>
+<button class="chip active" data-val="dust and particle details">Dust & particles</button>
+<button class="chip" data-val="wet / glossy surfaces">Wet / glossy surfaces</button>
+<button class="chip" data-val="fabric weave and stitching">Fabric weave & stitching</button>
+<button class="chip" data-val="subsurface scattering effects">Subsurface scattering</button>
+<button class="chip" data-val="subtle scratches and imperfections">Scratches & imperfections</button>
+<button class="chip" data-val="metal scratches and brushed texture">Metal scratches & brushed</button>
+<button class="chip" data-val="glass reflections and refractions">Glass reflections & refractions</button>
+<button class="chip" data-val="wood grain and varnish details">Wood grain & varnish</button>
+<button class="chip" data-val="water droplets and wet surfaces">Water droplets & wet surfaces</button>
+<button class="chip" data-val="micro skin details and tiny blemishes">Micro skin & blemishes</button>
+<button class="chip" data-val="paint chipping and weathered surfaces">Paint chipping & weathered</button>
+<button class="chip" data-val="rough stone textures and cracks">Stone textures & cracks</button>
+</div>
+<button class="translate-textures-btn" id="translateTexturesBtn"><i>🌐</i> Translate to Tamil</button>
+</div>
+
+<div>
+<label>Constraints / Do nots</label>
+<input id="constraints" type="text" placeholder="e.g. no text, no watermarks, no blurriness" value="no text, no watermarks, no blurriness" />
+</div>
+
+<div>
+<label>Additional Options</label>
+<div class="checkbox-group">
+  <div class="checkbox-item">
+    <input type="checkbox" id="autoCopy" />
+    <label for="autoCopy">Auto-copy prompt</label>
+  </div>
+  <div class="checkbox-item">
+    <input type="checkbox" id="imageOnly" />
+    <label for="imageOnly">Image-Only Prompt</label>
+  </div>
+  <div class="checkbox-item">
+    <input type="checkbox" id="imageWithOptions" checked />
+    <label for="imageWithOptions">Image + Options Prompt</label>
+  </div>
+  <div class="checkbox-item">
+    <input type="checkbox" id="autoGenerate" checked />
+    <label for="autoGenerate">Auto-generate after analysis</label>
+  </div>
+</div>
+</div>
+
+<div class="controls">
+<button class="btn" id="generate"><i>✨</i> Generate Prompt</button>
+<button class="ghost" id="copyBtn"><i>📋</i> Copy</button>
+<button class="ghost" id="downloadBtn"><i>💾</i> Download</button>
+<button class="ghost" id="translateBtn"><i>🌐</i> Translate to Tamil</button>
+</div>
+</section>
+
+<aside class="card right">
+<div class="output-header">
+  <h2>Generated Prompt</h2>
+  <div id="wordCount" class="word-count">Words: 0</div>
+</div>
+<pre id="outputBox"></pre>
+</aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// --- DOM Elements ---
+const fileInput = document.getElementById("fileInput");
+const imageBox = document.getElementById("imageBox");
+const placeholderText = document.getElementById("placeholderText");
+const imagePreviews = document.getElementById("imagePreviews");
+const uploadBtn = document.getElementById("uploadBtn");
+const clearImage = document.getElementById("clearImage");
+const loadSample = document.getElementById("loadSample");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const subjectInput = document.getElementById("subject");
+const suggestionBox = document.getElementById("suggestionBox");
+const outputBox = document.getElementById("outputBox");
+const wordCount = document.getElementById("wordCount");
+const toast = document.getElementById("toast");
+const analysisOverlay = document.getElementById("analysisOverlay");
+const analysisProgressBar = document.getElementById("analysisProgressBar");
+const analysisStatus = document.getElementById("analysisStatus");
+const analysisDetails = document.getElementById("analysisDetails");
+const autoGenerateCheckbox = document.getElementById("autoGenerate");
+const translateTexturesBtn = document.getElementById("translateTexturesBtn");
+
+// --- Tamil Translations Mapping ---
+const tamilTranslations = {
+  // UI Elements
+  "PromptCraft — Image Prompt Helper": "ப்ராம்ப்ட்கிராஃப்ட் — படத் தூண்டல் உதவி",
+  "Load images (or use the sample). Pick options and generate a professional AI prompt.": "படங்களை ஏற்றவும் (அல்லது மாதிரியைப் பயன்படுத்தவும்). விருப்பங்களைத் தேர்ந்தெடுத்து ஒரு தொழில்முறை AI தூண்டலை உருவாக்கவும்.",
+  "Reference Images": "குறிப்புப் படங்கள்",
+  "Load Example": "மாதிரியை ஏற்று",
+  "Upload Images": "படங்களை பதிவேற்று",
+  "Clear All": "அனைத்தையும் அழி",
+  "Analyze Image": "படத்தை பகுப்பாய்வு செய்",
+  "Subject": "பொருள்",
+  "e.g. character, sculpture, landscape": "எ.கா. கதாபாத்திரம், சிற்பம், இயற்கைக்காட்சி",
+  "Format": "வடிவம்",
+  "Scale / Size": "அளவு / அளவு",
+  "Style / Visual": "பாணி / காட்சி",
+  "Lighting / Mood": "வெளிச்சம் / மனநிலை",
+  "Props / Scene elements": "பொருட்கள் / காட்சி உறுப்புகள்",
+  "Textures / Details": "அமைப்புகள் / விவரங்கள்",
+  "Translate to Tamil": "தமிழில் மொழிபெயர்",
+  "Constraints / Do nots": "கட்டுப்பாடுகள் / செய்யாதவை",
+  "Additional Options": "கூடுதல் விருப்பங்கள்",
+  "Auto-copy prompt": "தூண்டலை தானாக நகலெடு",
+  "Image-Only Prompt": "படம் மட்டுமே தூண்டல்",
+  "Image + Options Prompt": "படம் + விருப்பங்கள் தூண்டல்",
+  "Auto-generate after analysis": "பகுப்பாய்வுக்குப் பிறகு தானாக உருவாக்கு",
+  "Generate Prompt": "தூண்டலை உருவாக்கு",
+  "Copy": "நகலெடு",
+  "Download": "பதிவிறக்கு",
+  "Translate to Tamil": "தமிழில் மொழிபெயர்",
+  "Generated Prompt": "உருவாக்கப்பட்ட தூண்டல்",
+  "Words:": "சொற்கள்:",
+  
+  // Styles
+  "Hyper-realistic": "அதிநவீன யதார்த்தம்",
+  "Photorealistic": "புகைப்பட யதார்த்தம்",
+  "Stylized": "பாணியாக்கப்பட்ட",
+  "Cinematic": "சினிமா தன்மை",
+  "Illustration": "விளக்கப்படம்",
+  "Concept art": "கருத்து கலை",
+  "Digital painting": "டிஜிட்டல் ஓவியம்",
+  "Anime": "அனிம்",
+  "Watercolor": "நீர்வண்ண ஓவியம்",
+  
+  // Lighting
+  "soft teal and white lighting": "மென்மையான டீல் மற்றும் வெள்ளை வெளிச்சம்",
+  "warm studio lighting": "சூடான ஸ்டூடியோ வெளிச்சம்",
+  "dramatic rim lighting": "நாடக ரிம் வெளிச்சம்",
+  "natural handheld lighting": "இயற்கை கைவச வெளிச்சம்",
+  "golden hour lighting": "கோல்டன் அவர் வெளிச்சம்",
+  "moonlit scene": "நிலவு வெளிச்ச காட்சி",
+  "foggy / misty lighting": "மூடுபனி / மங்கலான வெளிச்சம்",
+  "high contrast shadow": "உயர் கான்ட்ராஸ்ட் நிழல்",
+  "soft diffused lighting": "மென்மையான பரவும் வெளிச்சம்",
+  "colorful neon lighting": "வண்ணமய நியான் வெளிச்சம்",
+  
+  // Props
+  "computer monitor showing sculpting process": "சிற்ப செயல்முறையைக் காட்டும் கணினி மானிட்டர்",
+  "visible wireframes and brush marks": "தெரியும் வயர்ஃப்ரேம்கள் மற்றும் தூரிகை குறிகள்",
+  "tools, sketches, reference books": "கருவிகள், ஓவியங்கள், குறிப்பு நூல்கள்",
+  "clear round acrylic base": "தெளிவான வட்ட அக்ரிலிக் அடித்தளம்",
+  
+  // Textures/Details
+  "sharply defined sweat and fabric textures": "கூர்மையாக வரையறுக்கப்பட்ட வியர்வை மற்றும் துணி அமைப்புகள்",
+  "subtle reflections and highlights": "நுட்பமான பிரதிபலிப்புகள் மற்றும் முன்னணி",
+  "natural lens distortion": "இயற்கை லென்ஸ் திரிபு",
+  "skin pores and fine wrinkles": "தோல் துளைகள் மற்றும் நுண்ணிய சுருக்கங்கள்",
+  "realistic hair strands and flow": "யதார்த்த முடி இழைகள் மற்றும் பாய்வு",
+  "dust and particle details": "தூசி மற்றும் துகள் விவரங்கள்",
+  "wet / glossy surfaces": "ஈரமான / பளபளப்பான மேற்பரப்புகள்",
+  "fabric weave and stitching": "துணி நெசவு மற்றும் தைத்தல்",
+  "subsurface scattering effects": "உட்பரப்பு சிதறல் விளைவுகள்",
+  "subtle scratches and imperfections": "நுட்பமான கீறல்கள் மற்றும் குறைபாடுகள்",
+  "metal scratches and brushed texture": "உலோக கீறல்கள் மற்றும் துலக்கப்பட்ட அமைப்பு",
+  "glass reflections and refractions": "கண்ணாடி பிரதிபலிப்புகள் மற்றும் ஒளிவிலகல்கள்",
+  "wood grain and varnish details": "மர நார் மற்றும் மெருகு விவரங்கள்",
+  "water droplets and wet surfaces": "நீர் துளிகள் மற்றும் ஈரமான மேற்பரப்புகள்",
+  "micro skin details and tiny blemishes": "மைக்ரோ தோல் விவரங்கள் மற்றும் சிறிய களங்கங்கள்",
+  "paint chipping and weathered surfaces": "பெயிண்ட் சிம்பு மற்றும் காலத்தால் அரிக்கப்பட்ட மேற்பரப்புகள்",
+  "rough stone textures and cracks": "கடினமான கல் அமைப்புகள் மற்றும் விரிசல்கள்",
+  
+  // Constraints
+  "no text": "எழுத்து இல்லை",
+  "no watermarks": "நீர்முத்திரைகள் இல்லை",
+  "no blurriness": "தெளிவின்மை இல்லை",
+  
+  // Other
+  "high quality": "உயர் தரம்",
+  "professional": "தொழில்முறை",
+  "detailed": "விரிவான",
+  "8K resolution": "8K தெளிவு",
+  "Square": "சதுர",
+  "Portrait": "போர்ட்ரெய்ட்",
+  "Landscape": "இயற்கைக்காட்சி",
+  "Panoramic": "பனோராமிக்",
+  "4:5": "4:5",
+  "16:9": "16:9",
+  "Life-like": "வாழ்க்கை போன்ற",
+  "Miniature / 1:7 scale": "சிறு மாதிரி / 1:7 அளவு",
+  "Portrait-size": "போர்ட்ரெய்ட் அளவு",
+  "Monumental": "நினைவுச்சின்ன",
+  "Microscopic": "நுண்ணோக்கி"
+};
+
+// --- Chip toggle ---
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    if (chip.id === "otherPropBtn") return; // Handle separately
+    chip.classList.toggle("active");
+  });
+});
+
+// --- Other prop toggle ---
+const otherPropBtn = document.getElementById("otherPropBtn");
+const otherPropInput = document.getElementById("otherPropInput");
+otherPropBtn.addEventListener("click", () => {
+  otherPropBtn.classList.toggle("active");
+  otherPropInput.style.display = otherPropInput.style.display === "none" ? "block" : "none";
+  if (otherPropInput.style.display === "block") {
+    otherPropInput.focus();
+  }
+});
+
+// --- Image Upload ---
+uploadBtn.addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", e => {
+  handleFiles(e.target.files);
+});
+
+// Improved file handling with previews
+function handleFiles(files) {
+  if (!files.length) return;
+  
+  placeholderText.style.display = "none";
+  
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith("image/")) return;
+    
+    const reader = new FileReader();
+    reader.onload = e => {
+      const preview = document.createElement("div");
+      preview.className = "imagePreview";
+      
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.alt = "Preview";
+      
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "removeImage";
+      removeBtn.innerHTML = "×";
+      removeBtn.addEventListener("click", () => {
+        preview.remove();
+        if (imagePreviews.children.length === 0) {
+          placeholderText.style.display = "block";
+          analyzeBtn.disabled = true;
+        }
+      });
+      
+      preview.appendChild(img);
+      preview.appendChild(removeBtn);
+      imagePreviews.appendChild(preview);
+      analyzeBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Clear all images
+clearImage.addEventListener("click", () => {
+  imagePreviews.innerHTML = "";
+  placeholderText.style.display = "block";
+  fileInput.value = "";
+  analyzeBtn.disabled = true;
+});
+
+// Load sample image
+loadSample.addEventListener("click", () => {
+  imagePreviews.innerHTML = "";
+  placeholderText.style.display = "none";
+  
+  const preview = document.createElement("div");
+  preview.className = "imagePreview";
+  
+  const img = document.createElement("img");
+  img.src = "https://images.unsplash.com/photo-1579546929662-711aa81148cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80";
+  img.alt = "Sample image";
+  
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "removeImage";
+  removeBtn.innerHTML = "×";
+  removeBtn.addEventListener("click", () => {
+    preview.remove();
+    placeholderText.style.display = "block";
+    analyzeBtn.disabled = true;
+  });
+  
+  preview.appendChild(img);
+  preview.appendChild(removeBtn);
+  imagePreviews.appendChild(preview);
+  analyzeBtn.disabled = false;
+});
+
+// --- Drag & drop ---
+imageBox.addEventListener("dragover", e => {
+  e.preventDefault();
+  imageBox.classList.add("drag-over");
+});
+
+imageBox.addEventListener("dragleave", () => {
+  imageBox.classList.remove("drag-over");
+});
+
+imageBox.addEventListener("drop", e => {
+  e.preventDefault();
+  imageBox.classList.remove("drag-over");
+  
+  if (e.dataTransfer.files.length > 0) {
+    handleFiles(e.dataTransfer.files);
+  }
+});
+
+// --- Suggestions ---
+const suggestions = ["cyberpunk", "fantasy", "sci-fi", "portrait", "landscape", "character", "creature", "vehicle", "architecture", "product"];
+
+subjectInput.addEventListener("input", () => {
+  const val = subjectInput.value.toLowerCase();
+  if (val.length < 2) {
+    suggestionBox.innerHTML = "";
+    return;
+  }
+  
+  const filtered = suggestions.filter(tag => tag.includes(val));
+  suggestionBox.innerHTML = filtered.map(s => 
+    `<span class="tag" data-suggestion="${s}">${s}</span>`
+  ).join(" ");
+  
+  // Add click event to suggestions
+  document.querySelectorAll(".tag[data-suggestion]").forEach(tag => {
+    tag.addEventListener("click", () => {
+      subjectInput.value = tag.getAttribute("data-suggestion");
+      suggestionBox.innerHTML = "";
+    });
+  });
+});
+
+// --- Image Analysis Simulation ---
+analyzeBtn.addEventListener("click", () => {
+  // Show analysis overlay
+  analysisOverlay.classList.add("visible");
+  
+  // Simulate API analysis progress
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += Math.random() * 10;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(progressInterval);
+      finishAnalysis();
+    }
+    analysisProgressBar.style.width = `${progress}%`;
+    
+    // Update status messages based on progress
+    if (progress < 30) {
+      analysisStatus.textContent = "Analyzing image composition...";
+      analysisDetails.textContent = "Detecting subjects and layout";
+    } else if (progress < 60) {
+      analysisStatus.textContent = "Identifying colors and lighting...";
+      analysisDetails.textContent = "Extracting color palette and light sources";
+    } else if (progress < 90) {
+      analysisStatus.textContent = "Recognizing style and textures...";
+      analysisDetails.textContent = "Analyzing visual style and surface details";
+    } else {
+      analysisStatus.textContent = "Finalizing analysis...";
+      analysisDetails.textContent = "Generating recommendations";
+    }
+  }, 200);
+});
+
+function finishAnalysis() {
+  // Simulate API response delay
+  setTimeout(() => {
+    // Hide analysis overlay
+    analysisOverlay.classList.remove("visible");
+    
+    // Generate analysis results based on the sample image
+    const analysisResults = {
+      subject: "child crying and cat taking care of the child",
+      styles: ["Hyper-realistic"],
+      lighting: ["warm studio lighting"],
+      details: ["dust and particle details"],
+      props: ["Sand"],
+      constraints: "no text, no watermarks, no blurriness"
+    };
+    
+    // Apply analysis results to the form
+    subjectInput.value = analysisResults.subject;
+    
+    // Activate appropriate chips
+    document.querySelectorAll(".chip").forEach(chip => {
+      chip.classList.remove("active");
+      if (analysisResults.styles.includes(chip.dataset.val) ||
+          analysisResults.lighting.includes(chip.dataset.val) ||
+          analysisResults.details.includes(chip.dataset.val) ||
+          analysisResults.props.includes(chip.dataset.val)) {
+        chip.classList.add("active");
+      }
+    });
+    
+    // Set the other prop input if needed
+    if (analysisResults.props.includes("Sand")) {
+      otherPropInput.value = "Sand";
+      otherPropInput.style.display = "block";
+      otherPropBtn.classList.add("active");
+    }
+    
+    document.getElementById("constraints").value = analysisResults.constraints;
+    
+    showToast("Image analysis complete! Form fields updated.");
+    
+    // Automatically generate prompt if the option is enabled
+    if (autoGenerateCheckbox.checked) {
+      autoGeneratePrompt();
+    }
+  }, 800);
+}
+
+// Function to show auto-generation indicator
+function showAutoGenerateIndicator() {
+  const indicator = document.createElement("div");
+  indicator.className = "auto-generate-indicator";
+  indicator.innerHTML = `<div class="loading"></div> Auto-generating prompt...`;
+  document.body.appendChild(indicator);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    indicator.remove();
+  }, 3000);
+}
+
+// Function to automatically generate prompt after analysis
+function autoGeneratePrompt() {
+  showAutoGenerateIndicator();
+  
+  // Small delay to allow UI to update
+  setTimeout(() => {
+    generatePrompt();
+    showToast("Prompt auto-generated based on image analysis!");
+  }, 1000);
+}
+
+// --- Generate Detailed Prompt Based on Image ---
+function generateImageBasedPrompt() {
+  // Get all selected options
+  const subject = subjectInput.value || "a subject";
+  const format = document.getElementById("format").value;
+  const scale = document.getElementById("scale").value;
+  const styles = [...document.querySelectorAll("#styleChips .chip.active")].map(c => c.dataset.val);
+  const lights = [...document.querySelectorAll("#lightChips .chip.active")].map(c => c.dataset.val);
+  let props = [...document.querySelectorAll("#propChips .chip.active")].map(c => c.dataset.val);
+  const otherProp = otherPropInput.value.trim();
+  if (otherProp) props.push(...otherProp.split(",").map(p => p.trim()).filter(Boolean));
+  const details = [...document.querySelectorAll("#detailChips .chip.active")].map(c => c.dataset.val);
+  const constraints = document.getElementById("constraints").value;
+
+  // Build the prompt using the selected options
+  let prompt = "";
+  
+  // Add style and format
+  if (styles.length > 0) {
+    prompt += styles.join(", ") + " ";
+  }
+  
+  // Add scale if selected
+  if (scale && scale !== "Life-like") {
+    prompt += scale.toLowerCase() + " ";
+  }
+  
+  // Add format if selected
+  if (format && format !== "Square") {
+    prompt += format.toLowerCase() + " ";
+  }
+  
+  // Ensure the subject is always included
+  prompt += `of ${subject}`;
+  
+  // Add lighting
+  if (lights.length > 0) {
+    prompt += `, with ${lights.join(", ")}`;
+  }
+  
+  // Add details
+  if (details.length > 0) {
+    prompt += `, featuring ${details.join(", ")}`;
+  }
+  
+  // Add props
+  if (props.length > 0) {
+    prompt += `, including ${props.join(", ")}`;
+  }
+  
+  // Add constraints
+  if (constraints) {
+    prompt += `. ${constraints}`;
+  }
+  
+  // Add quality tags
+  prompt += ". High quality, professional, detailed, 8K resolution";
+  
+  return prompt;
+}
+
+// --- Generate Prompt Function ---
+function generatePrompt() {
+  const subject = subjectInput.value || "a subject";
+  const format = document.getElementById("format").value;
+  const scale = document.getElementById("scale").value;
+  const styles = [...document.querySelectorAll("#styleChips .chip.active")].map(c => c.dataset.val);
+  const lights = [...document.querySelectorAll("#lightChips .chip.active")].map(c => c.dataset.val);
+  let props = [...document.querySelectorAll("#propChips .chip.active")].map(c => c.dataset.val);
+  const otherProp = otherPropInput.value.trim();
+  if (otherProp) props.push(...otherProp.split(",").map(p => p.trim()).filter(Boolean));
+  const details = [...document.querySelectorAll("#detailChips .chip.active")].map(c => c.dataset.val);
+  const constraints = document.getElementById("constraints").value;
+
+  const imageOnly = document.getElementById("imageOnly").checked;
+  const imageWithOptions = document.getElementById("imageWithOptions").checked;
+
+  let promptParts = [];
+
+  if (imageOnly && imagePreviews.children.length > 0) {
+    // Generate a detailed descriptive prompt based on the image and form values
+    promptParts.push(generateImageBasedPrompt());
+  } else if (imageWithOptions && imagePreviews.children.length > 0) {
+    promptParts.push("Create an image inspired by the reference images with the following characteristics:");
+    promptParts.push("");
+    
+    if (styles.length) promptParts.push(`Style: ${styles.join(", ")}`);
+    if (scale) promptParts.push(`Scale: ${scale}`);
+    if (format) promptParts.push(`Format: ${format}`);
+    
+    // Ensure subject is always included
+    promptParts.push(`Subject: ${subject}`);
+    
+    if (lights.length) promptParts.push(`Lighting: ${lights.join(", ")}`);
+    if (details.length) promptParts.push(`Details: ${details.join(", ")}`);
+    if (props.length) promptParts.push(`Scene elements: ${props.join(", ")}`);
+    
+    if (constraints) promptParts.push(`Constraints: ${constraints}`);
+  } else {
+    // Ensure subject is always included
+    if (styles.length) promptParts.push(styles.join(", "));
+    if (scale) promptParts.push(scale);
+    if (format) promptParts.push(format);
+    
+    promptParts.push(`of ${subject}`);
+    
+    if (lights.length) promptParts.push(`with ${lights.join(", ")}`);
+    if (details.length) promptParts.push(`featuring ${details.join(", ")}`);
+    if (props.length) promptParts.push(`including ${props.join(", ")}`);
+    
+    if (constraints) promptParts.push(`${constraints}`);
+    
+    promptParts.push("high quality, professional, detailed");
+  }
+
+  const finalPrompt = promptParts.join("\n");
+  outputBox.textContent = finalPrompt;
+
+  // Update word count
+  const words = finalPrompt.split(/\s+/).filter(Boolean).length;
+  wordCount.textContent = `Words: ${words}`;
+
+  if (document.getElementById("autoCopy").checked) {
+    navigator.clipboard.writeText(finalPrompt);
+    showToast("Prompt auto-copied to clipboard!");
+  }
+}
+
+// --- Generate Prompt Button ---
+document.getElementById("generate").addEventListener("click", generatePrompt);
+
+// --- Copy ---
+document.getElementById("copyBtn").addEventListener("click", () => {
+  if (outputBox.textContent) {
+    navigator.clipboard.writeText(outputBox.textContent);
+    showToast("Prompt copied to clipboard!");
+  } else {
+    showToast("Generate a prompt first!");
+  }
+});
+
+// --- Download ---
+document.getElementById("downloadBtn").addEventListener("click", () => {
+  if (outputBox.textContent) {
+    const blob = new Blob([outputBox.textContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "prompt.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Prompt downloaded!");
+  } else {
+    showToast("Generate a prompt first!");
+  }
+});
+
+// --- Translate UI to Tamil ---
+function translateUIToTamil() {
+  // Translate all text content in the UI
+  document.querySelectorAll('h1, h2, label, .lead, .placeholderContent p, .btn, .ghost, .chip, option, .checkbox-item label, .hint, .translate-textures-btn')
+    .forEach(element => {
+      const originalText = element.textContent.trim();
+      if (tamilTranslations[originalText]) {
+        element.textContent = tamilTranslations[originalText];
+      }
+    });
+  
+  // Translate placeholders
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(input => {
+    const placeholderText = input.getAttribute('placeholder');
+    if (tamilTranslations[placeholderText]) {
+      input.setAttribute('placeholder', tamilTranslations[placeholderText]);
+    }
+  });
+  
+  showToast("UI translated to Tamil!");
+}
+
+// --- Translate Textures/Details to Tamil ---
+translateTexturesBtn.addEventListener("click", () => {
+  const detailChips = document.querySelectorAll("#detailChips .chip");
+  detailChips.forEach(chip => {
+    const originalText = chip.textContent;
+    if (tamilTranslations[originalText]) {
+      chip.textContent = tamilTranslations[originalText];
+    }
+    
+    // Also translate the data value if it exists in our translations
+    if (chip.dataset.val && tamilTranslations[chip.dataset.val]) {
+      chip.dataset.val = tamilTranslations[chip.dataset.val];
+    }
+  });
+  
+  showToast("Textures/Details translated to Tamil!");
+});
+
+// --- Translate Prompt to Tamil ---
+document.getElementById("translateBtn").addEventListener("click", () => {
+  if (!outputBox.textContent) {
+    showToast("Generate a prompt first!");
+    return;
+  }
+  
+  let translatedText = outputBox.textContent;
+  
+  // Replace English terms with Tamil translations
+  for (const [english, tamil] of Object.entries(tamilTranslations)) {
+    const regex = new RegExp(english, "gi");
+    translatedText = translatedText.replace(regex, tamil);
+  }
+  
+  outputBox.textContent = translatedText;
+  showToast("Prompt translated to Tamil!");
+});
+
+// --- Toast ---
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.style.display = "block";
+  setTimeout(() => {
+    toast.style.display = "none";
+  }, 3000);
+}
+
+// Initialize
+placeholderText.style.display = "block";
+
+// Auto-generate a sample prompt on load
+setTimeout(() => {
+  subjectInput.value = "Child crying and cat taking care of the child";
+  generatePrompt();
+}, 500);
+</script>
+</body>
+</html>
